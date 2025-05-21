@@ -11,10 +11,13 @@ from app.schemas.training import (
     TrainingResponse,
     ScenarioResponse,
     TrainingScenario,
-    TrainingProgress
+    TrainingProgress,
+    TrainingScenarioCreate, # Added
+    TrainingScenarioUpdate  # Added
 )
 from app.models.training import TrainingScenario as TrainingScenarioModel
 from app.models.training import TrainingResponse as TrainingResponseModel
+from app.models.personality import PersonalityAttribute # Added
 
 router = APIRouter(
     prefix="/api/training",
@@ -43,26 +46,37 @@ async def evaluate_response(
         }
 
         # Get personality attributes
-        # In a real implementation, you'd fetch this from the database
-        personality_attributes = {
-            "Professionalism": 85,
-            "Empathy": 75,
-            "Assertiveness": 65,
-            "Knowledge": 80
-        }
+        db_personality_attributes = db.query(PersonalityAttribute).all()
+        if not db_personality_attributes:
+            # Fallback to defaults if none are configured, or raise error
+            # For now, let's use a simple default if none found
+            # This matches the behavior in personality.py router if no attributes are ever saved
+             personality_attributes = {
+                "Professionalism": 85, "Empathy": 75, "Assertiveness": 65, "Knowledge": 80
+            }
+        else:
+            personality_attributes = {attr.name: attr.value for attr in db_personality_attributes}
 
         # Evaluate the response
         evaluation = await ai_evaluator.evaluate_response(
             response.response_text,
             scenario,
-            personality_attributes
+            personality_attributes # Use fetched/default attributes
         )
 
         # Save the evaluation to the database
-        db_response = TrainingResponseModel(
-            agent_response=response.response_text,
-            evaluation=evaluation
-        )
+        db_response_data = {
+            "agent_response": response.response_text,
+            "evaluation": evaluation
+        }
+        if response.scenario_id:
+            # Check if the scenario exists
+            db_scenario = db.query(TrainingScenarioModel).filter(TrainingScenarioModel.id == response.scenario_id).first()
+            if not db_scenario:
+                raise HTTPException(status_code=404, detail=f"Scenario with ID {response.scenario_id} not found")
+            db_response_data["scenario_id"] = response.scenario_id
+        
+        db_response = TrainingResponseModel(**db_response_data)
         db.add(db_response)
         db.commit()
 
@@ -84,6 +98,54 @@ def get_scenarios(
 ):
     scenarios = db.query(TrainingScenarioModel).offset(skip).limit(limit).all()
     return scenarios
+
+@router.post("/scenarios", response_model=TrainingScenario, status_code=201)
+def create_scenario(scenario: TrainingScenarioCreate, db: Session = Depends(get_db)):
+    """Create a new training scenario."""
+    db_scenario = TrainingScenarioModel(**scenario.model_dump())
+    db.add(db_scenario)
+    db.commit()
+    db.refresh(db_scenario)
+    return db_scenario
+
+@router.get("/scenarios/{scenario_id}", response_model=TrainingScenario)
+def get_scenario(scenario_id: UUID, db: Session = Depends(get_db)):
+    """Get a specific training scenario by its ID."""
+    db_scenario = db.query(TrainingScenarioModel).filter(TrainingScenarioModel.id == scenario_id).first()
+    if not db_scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return db_scenario
+
+@router.put("/scenarios/{scenario_id}", response_model=TrainingScenario)
+def update_scenario(scenario_id: UUID, scenario_update: TrainingScenarioUpdate, db: Session = Depends(get_db)):
+    """Update an existing training scenario."""
+    db_scenario = db.query(TrainingScenarioModel).filter(TrainingScenarioModel.id == scenario_id).first()
+    if not db_scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    
+    update_data = scenario_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_scenario, key, value)
+        
+    db.commit()
+    db.refresh(db_scenario)
+    return db_scenario
+
+@router.delete("/scenarios/{scenario_id}", status_code=204)
+def delete_scenario(scenario_id: UUID, db: Session = Depends(get_db)):
+    """Delete a training scenario."""
+    db_scenario = db.query(TrainingScenarioModel).filter(TrainingScenarioModel.id == scenario_id).first()
+    if not db_scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    
+    # Optional: Check for and handle related TrainingResponses if necessary
+    # For now, we'll just delete the scenario.
+    # If foreign key constraints are set up with cascade delete, responses might be deleted automatically.
+    # Otherwise, you might want to prevent deletion if responses exist, or delete them manually.
+
+    db.delete(db_scenario)
+    db.commit()
+    return None
 
 @router.get("/progress", response_model=TrainingProgress)
 def get_training_progress(db: Session = Depends(get_db)):

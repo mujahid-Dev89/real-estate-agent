@@ -4,9 +4,10 @@ import { useState, useEffect } from "react"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input" // Added Input
 import { personalityTrainingApi } from "@/services/api"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2 } from "lucide-react"
+import { Loader2, Trash2, PlusCircle } from "lucide-react" // Added icons
 
 interface PersonalityAttribute {
   id: string
@@ -19,6 +20,10 @@ export function PersonalityAttributes() {
   const [attributes, setAttributes] = useState<PersonalityAttribute[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [newAttributeName, setNewAttributeName] = useState("")
+  const [newAttributeDescription, setNewAttributeDescription] = useState("")
+  const [newAttributeValue, setNewAttributeValue] = useState(50)
 
   useEffect(() => {
     loadAttributes()
@@ -74,7 +79,8 @@ export function PersonalityAttributes() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await personalityTrainingApi.updateAttributes(attributes)
+      // Use the renamed function for clarity, though its backend implementation is the same for now
+      await personalityTrainingApi.updateBulkAttributes(attributes.map(attr => ({ id: attr.id, value: attr.value })))
       toast({
         title: "Success",
         description: "Personality attributes updated successfully",
@@ -83,6 +89,65 @@ export function PersonalityAttributes() {
       toast({
         title: "Error",
         description: "Failed to update personality attributes",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCreateAttribute = async () => {
+    if (!newAttributeName.trim() || !newAttributeDescription.trim()) {
+      toast({
+        title: "Error",
+        description: "Name and description cannot be empty.",
+        variant: "destructive",
+      })
+      return
+    }
+    setSaving(true)
+    try {
+      await personalityTrainingApi.createAttribute({
+        name: newAttributeName,
+        description: newAttributeDescription,
+        value: newAttributeValue,
+      })
+      toast({
+        title: "Success",
+        description: "Attribute created successfully.",
+      })
+      setNewAttributeName("")
+      setNewAttributeDescription("")
+      setNewAttributeValue(50)
+      setShowCreateForm(false)
+      loadAttributes() // Refresh list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create attribute.",
+        variant: "destructive",
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteAttribute = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this attribute?")) {
+      return
+    }
+    setSaving(true) // Use general saving state for simplicity
+    try {
+      await personalityTrainingApi.deleteAttribute(id)
+      toast({
+        title: "Success",
+        description: "Attribute deleted successfully.",
+      })
+      loadAttributes() // Refresh list
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete attribute.",
         variant: "destructive",
       })
     } finally {
@@ -105,16 +170,69 @@ export function PersonalityAttributes() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Personality Attributes</CardTitle>
+        <Button onClick={() => setShowCreateForm(!showCreateForm)} variant="outline" size="sm">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          {showCreateForm ? "Cancel" : "Add New"}
+        </Button>
       </CardHeader>
       <CardContent>
+        {showCreateForm && (
+          <div className="mb-6 p-4 border rounded-lg space-y-3">
+            <h3 className="text-lg font-medium">Create New Attribute</h3>
+            <div>
+              <label htmlFor="newAttrName" className="text-sm font-medium">Name</label>
+              <Input
+                id="newAttrName"
+                value={newAttributeName}
+                onChange={(e) => setNewAttributeName(e.target.value)}
+                placeholder="e.g., Friendliness"
+              />
+            </div>
+            <div>
+              <label htmlFor="newAttrDesc" className="text-sm font-medium">Description</label>
+              <Input
+                id="newAttrDesc"
+                value={newAttributeDescription}
+                onChange={(e) => setNewAttributeDescription(e.target.value)}
+                placeholder="e.g., How friendly the agent appears"
+              />
+            </div>
+            <div>
+              <label htmlFor="newAttrValue" className="text-sm font-medium">Initial Value: {newAttributeValue}%</label>
+              <Slider
+                id="newAttrValue"
+                value={[newAttributeValue]}
+                onValueChange={([val]) => setNewAttributeValue(val)}
+                max={100}
+                step={1}
+              />
+            </div>
+            <Button onClick={handleCreateAttribute} disabled={saving} className="w-full">
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Create Attribute
+            </Button>
+          </div>
+        )}
+
         <div className="space-y-4">
           {attributes.map((attribute) => (
-            <div key={attribute.id} className="space-y-2">
-              <div className="flex justify-between">
-                <label className="text-sm font-medium">{attribute.name}</label>
-                <span className="text-sm text-muted-foreground">{attribute.value}%</span>
+            <div key={attribute.id} className="space-y-2 p-3 border rounded-md relative">
+              <div className="flex justify-between items-start">
+                <div>
+                  <label className="text-sm font-medium">{attribute.name}</label>
+                  <span className="text-sm text-muted-foreground ml-2">{attribute.value}%</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteAttribute(attribute.id)}
+                  disabled={saving}
+                  className="absolute top-1 right-1"
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
               </div>
               <Slider
                 value={[attribute.value]}
@@ -125,9 +243,15 @@ export function PersonalityAttributes() {
               <p className="text-sm text-muted-foreground">{attribute.description}</p>
             </div>
           ))}
-          <Button onClick={handleSave} disabled={saving} className="w-full">
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
+          {attributes.length > 0 && (
+            <Button onClick={handleSave} disabled={saving || showCreateForm} className="w-full mt-4">
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Save All Value Changes
+            </Button>
+          )}
+          {attributes.length === 0 && !showCreateForm && (
+            <p className="text-center text-muted-foreground">No attributes defined. Click "Add New" to create one.</p>
+          )}
         </div>
       </CardContent>
     </Card>

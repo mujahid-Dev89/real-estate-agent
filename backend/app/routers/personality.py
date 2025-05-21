@@ -3,7 +3,7 @@ from typing import List, Dict
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.personality import PersonalityAttribute
-from ..schemas.personality import AttributeResponse, AttributeUpdate
+from ..schemas.personality import AttributeResponse, AttributeUpdate, AttributeCreate, AttributeBase
 
 router = APIRouter(
     prefix="/api/personality",
@@ -61,4 +61,39 @@ def update_attributes(attributes: List[AttributeUpdate], db: Session = Depends(g
     
     db.commit()
     return updated_attributes
+
+@router.post("/attributes", response_model=AttributeResponse, status_code=201)
+def create_attribute(attribute: AttributeCreate, db: Session = Depends(get_db)):
+    """Create a new personality attribute"""
+    db_attribute = PersonalityAttribute(**attribute.model_dump())
+    db.add(db_attribute)
+    db.commit()
+    db.refresh(db_attribute)
+    return db_attribute
+
+@router.put("/attributes/{attribute_id}", response_model=AttributeResponse)
+def update_single_attribute(attribute_id: str, attribute_update: AttributeBase, db: Session = Depends(get_db)):
+    """Update a specific personality attribute"""
+    db_attribute = db.query(PersonalityAttribute).filter(PersonalityAttribute.id == attribute_id).first()
+    if not db_attribute:
+        raise HTTPException(status_code=404, detail=f"Attribute with ID {attribute_id} not found")
+    
+    db_attribute.name = attribute_update.name
+    db_attribute.value = attribute_update.value
+    db_attribute.description = attribute_update.description
+    
+    db.commit()
+    db.refresh(db_attribute)
+    return db_attribute
+
+@router.delete("/attributes/{attribute_id}", status_code=204)
+def delete_attribute(attribute_id: str, db: Session = Depends(get_db)):
+    """Delete a specific personality attribute"""
+    db_attribute = db.query(PersonalityAttribute).filter(PersonalityAttribute.id == attribute_id).first()
+    if not db_attribute:
+        raise HTTPException(status_code=404, detail=f"Attribute with ID {attribute_id} not found")
+    
+    db.delete(db_attribute)
+    db.commit()
+    return None
 

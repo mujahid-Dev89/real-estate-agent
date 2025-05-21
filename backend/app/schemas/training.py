@@ -7,6 +7,7 @@ class ScenarioResponse(BaseModel):
     scenario_query: str = Field(..., description="The customer's query or scenario question")
     scenario_context: str = Field(..., description="Additional context about the scenario")
     response_text: str = Field(..., description="The agent's response to evaluate")
+    scenario_id: Optional[UUID] = Field(None, description="Optional ID of the predefined scenario being responded to")
 
 class PersonalityMatch(BaseModel):
     attribute: str
@@ -44,6 +45,22 @@ class TrainingScenario(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TrainingScenarioCreate(BaseModel):
+    title: str
+    description: str
+    customer_query: str
+    context: str
+    difficulty_level: str
+    category: str
+
+class TrainingScenarioUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    customer_query: Optional[str] = None
+    context: Optional[str] = None
+    difficulty_level: Optional[str] = None
+    category: Optional[str] = None
 
 class TrainingResponse(BaseModel):
     id: UUID

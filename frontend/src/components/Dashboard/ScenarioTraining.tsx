@@ -1,15 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // Added useEffect
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { personalityTrainingApi } from "@/services/api"
 import { useToast } from "@/components/ui/use-toast"
-import { CheckCircle, AlertCircle, ArrowRight } from "lucide-react"
+import { CheckCircle, AlertCircle, ArrowRight, Loader2 } from "lucide-react" // Added Loader2
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { AIModel } from "@/services/api"
+
+// Define TrainingScenario interface based on backend schema
+interface TrainingScenario {
+  id: string // Assuming UUID is string on frontend
+  title: string
+  description: string
+  customer_query: string // This was 'query', changed to 'customer_query' to match backend
+  context: string
+  difficulty_level: string
+  category: string
+  created_at: string // Assuming datetime is string
+}
 
 interface Evaluation {
   score: number
@@ -24,25 +36,52 @@ export function ScenarioTraining() {
   const [response, setResponse] = useState("")
   const [isEvaluating, setIsEvaluating] = useState(false)
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null)
-  const [currentScenario] = useState({
-    query: "I'm interested in buying a house in the downtown area. What can you tell me about the market there?",
-    context:
-      "The downtown area has seen a 15% increase in property values over the last year. The average home price is $500,000.",
-  })
+  
+  const [scenarios, setScenarios] = useState<TrainingScenario[]>([])
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string | undefined>(undefined)
+  const [isLoadingScenarios, setIsLoadingScenarios] = useState(true)
+
   const [selectedModel, setSelectedModel] = useState<AIModel>("deepseek")
 
+  useEffect(() => {
+    loadScenarios()
+  }, [])
+
+  const loadScenarios = async () => {
+    setIsLoadingScenarios(true)
+    try {
+      const res = await personalityTrainingApi.getScenarios()
+      setScenarios(res.data)
+      if (res.data.length > 0) {
+        setSelectedScenarioId(res.data[0].id) // Select the first scenario by default
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load training scenarios.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingScenarios(false)
+    }
+  }
+  
+  const currentScenario = scenarios.find(s => s.id === selectedScenarioId)
+
   const handleSubmitResponse = async () => {
-    if (!response.trim()) return
+    if (!response.trim() || !currentScenario) return
 
-  setIsEvaluating(true)
-  try {
-    const result = await personalityTrainingApi.evaluateResponse({
-      scenario_query: currentScenario.query,
-      scenario_context: currentScenario.context,
-      response_text: response
-    }, selectedModel)
+    setIsEvaluating(true)
+    setEvaluation(null) // Clear previous evaluation
+    try {
+      const result = await personalityTrainingApi.evaluateResponse({
+        scenario_query: currentScenario.customer_query, // Changed from currentScenario.query
+        scenario_context: currentScenario.context,
+        response_text: response,
+        scenario_id: currentScenario.id
+      }, selectedModel)
 
-    setEvaluation(result.data)
+      setEvaluation(result.data)
     toast({
       title: "Response Evaluated",
       description: `Evaluated using ${selectedModel.toUpperCase()}`,
@@ -63,20 +102,51 @@ export function ScenarioTraining() {
       <Card>
         <CardHeader>
           <CardTitle>Scenario Training</CardTitle>
-          <CardDescription>Practice responding to real estate scenarios</CardDescription>
+          <CardDescription>Practice responding to real estate scenarios. Select a scenario and provide your response.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <h3 className="font-semibold">Customer Query</h3>
-              <p className="text-sm text-muted-foreground">{currentScenario.query}</p>
+          {isLoadingScenarios ? (
+            <div className="flex justify-center items-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <p className="ml-2">Loading scenarios...</p>
             </div>
+          ) : scenarios.length === 0 ? (
+             <p className="text-center text-muted-foreground">No training scenarios available. Please add some first.</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold">Select Scenario</h3>
+                <Select value={selectedScenarioId} onValueChange={(value) => setSelectedScenarioId(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a scenario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {scenarios.map(scenario => (
+                      <SelectItem key={scenario.id} value={scenario.id}>
+                        {scenario.title} ({scenario.category} - {scenario.difficulty_level})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <h3 className="font-semibold">Context</h3>
-              <p className="text-sm text-muted-foreground">{currentScenario.context}</p>
-            </div>
+              {currentScenario && (
+                <>
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Customer Query</h3>
+                    <p className="text-sm text-muted-foreground p-3 bg-slate-50 rounded-md border">
+                      {currentScenario.customer_query}
+                    </p>
+                  </div>
 
+                  <div className="space-y-2">
+                    <h3 className="font-semibold">Context</h3>
+                    <p className="text-sm text-muted-foreground p-3 bg-slate-50 rounded-md border">
+                      {currentScenario.context}
+                    </p>
+                  </div>
+                </>
+              )}
             <div className="space-y-2">
               <h3 className="font-semibold">AI Model</h3>
               <Select value={selectedModel} onValueChange={(value: AIModel) => setSelectedModel(value)}>
@@ -101,11 +171,11 @@ export function ScenarioTraining() {
               />
             </div>
 
-            <Button onClick={handleSubmitResponse} disabled={isEvaluating || !response.trim()} className="w-full">
+            <Button onClick={handleSubmitResponse} disabled={isEvaluating || !response.trim() || !currentScenario} className="w-full">
               {isEvaluating ? "Evaluating..." : "Submit for Evaluation"}
             </Button>
 
-            {evaluation && (
+            {evaluation && currentScenario && (
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">Evaluation Results</h3>
@@ -150,6 +220,7 @@ export function ScenarioTraining() {
               </div>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

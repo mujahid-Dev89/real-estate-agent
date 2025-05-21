@@ -35,13 +35,17 @@ interface ScenarioResponse {
   scenario_query: string
   scenario_context: string
   response_text: string
+  scenario_id?: string // Added optional scenario_id
 }
 
 // API endpoints for personality training
 export const personalityTrainingApi = {
   // Personality Attributes
   getAttributes: () => api.get("/personality/attributes"),
-  updateAttributes: (data: any) => api.put("/personality/attributes", data),
+  createAttribute: (data: any) => api.post("/personality/attributes", data),
+  updateAttribute: (id: string, data: any) => api.put(`/personality/attributes/${id}`, data),
+  deleteAttribute: (id: string) => api.delete(`/personality/attributes/${id}`),
+  updateBulkAttributes: (data: any) => api.put("/personality/attributes", data), // Renamed for clarity
 
   // Response Templates
   getTemplates: () => api.get("/templates"),
@@ -50,7 +54,12 @@ export const personalityTrainingApi = {
   deleteTemplate: (id: string) => api.delete(`/templates/${id}`),
 
   // Training Scenarios
-  getScenarios: () => api.get("/training/scenarios"),
+  getScenarios: (skip: number = 0, limit: number = 10) => api.get("/training/scenarios", { params: { skip, limit } }),
+  getScenarioById: (id: string) => api.get(`/training/scenarios/${id}`),
+  createScenario: (data: any) => api.post("/training/scenarios", data),
+  updateScenario: (id: string, data: any) => api.put(`/training/scenarios/${id}`, data),
+  deleteScenario: (id: string) => api.delete(`/training/scenarios/${id}`),
+  // submitScenarioResponse is still here, but its usage might need review based on frontend flow
   submitScenarioResponse: (id: string, data: any) => api.post(`/scenarios/${id}/response`, data),
 
   // Training Progress

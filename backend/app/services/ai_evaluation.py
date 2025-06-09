@@ -66,7 +66,9 @@ class AIEvaluator:
         response = requests.post(url, headers=headers, json=data)
         if response.status_code == 200:
             result = response.json()
-            evaluation = self._parse_evaluation(result['choices'][0]['message']['content'])
+            raw_llm_text = result['choices'][0]['message']['content']
+            print(f"RAW LLM EVALUATION TEXT (DeepSeek):\n{raw_llm_text}\n")
+            evaluation = self._parse_evaluation(raw_llm_text)
             return evaluation
         else:
             raise Exception(f"DeepSeek API error: {response.text}")
@@ -96,7 +98,9 @@ class AIEvaluator:
         response = requests.post(url, headers=headers, json=data)
         if response.status_code == 200:
             result = response.json()
-            evaluation = self._parse_evaluation(result['choices'][0]['message']['content'])
+            raw_llm_text = result['choices'][0]['message']['content']
+            print(f"RAW LLM EVALUATION TEXT (Mistral):\n{raw_llm_text}\n")
+            evaluation = self._parse_evaluation(raw_llm_text)
             return evaluation
         else:
             raise Exception(f"Mistral API error: {response.text}")
@@ -116,7 +120,9 @@ class AIEvaluator:
             ],
             temperature=0.7
         )
-        evaluation = self._parse_evaluation(response.choices[0].message.content)
+        raw_llm_text = response.choices[0].message.content
+        print(f"RAW LLM EVALUATION TEXT (OpenAI):\n{raw_llm_text}\n")
+        evaluation = self._parse_evaluation(raw_llm_text)
         return evaluation
 
     def _create_evaluation_prompt(

@@ -62,6 +62,13 @@ export const personalityTrainingApi = {
   // submitScenarioResponse is still here, but its usage might need review based on frontend flow
   submitScenarioResponse: (id: string, data: any) => api.post(`/scenarios/${id}/response`, data),
 
+  // Properties
+  getProperties: (params?: any) => api.get("/properties", { params }),
+  getPropertyById: (id: string) => api.get(`/properties/${id}`),
+  createProperty: (data: any) => api.post("/properties", data),
+  updateProperty: (id: string, data: any) => api.put(`/properties/${id}`, data),
+  deleteProperty: (id: string) => api.delete(`/properties/${id}`),
+
   // Training Progress
   getProgress: () => api.get("/training/progress"),
   saveProgress: (data: any) => api.post("/training/progress", data),

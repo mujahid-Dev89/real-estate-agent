@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, templates, training, agent, personality
+from .routers import auth, templates, training, agent, personality, properties # Added properties
 from .models import create_tables
 
 app = FastAPI()
@@ -23,6 +23,7 @@ app.include_router(templates.router)
 app.include_router(training.router)
 app.include_router(agent.router)
 app.include_router(personality.router)
+app.include_router(properties.router) # Added properties router
 
 @app.get("/")
 async def root():

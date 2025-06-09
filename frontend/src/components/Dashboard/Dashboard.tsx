@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { PersonalityAttributes } from "./PersonalityAttributes"
 import { ScenarioTraining } from "./ScenarioTraining"
 import { ResponseTemplates } from "./ResponseTemplates"
+import { ManageProperties } from "./ManageProperties" // Added
 import { MessageSquare } from "lucide-react"
 
 export default function Dashboard() {
@@ -26,6 +27,7 @@ export default function Dashboard() {
       </div>
 
       <ResponseTemplates />
+      <ManageProperties /> {/* Added ManageProperties component */}
     </div>
   )
 }

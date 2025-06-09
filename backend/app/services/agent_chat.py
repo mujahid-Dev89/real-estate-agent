@@ -21,10 +21,11 @@ class AgentChat:
         user_message: str,
         conversation_history: List[Dict[str, str]],
         personality_attributes: Dict[str, float],
-        templates: List[Dict] = None
+        templates: List[Dict] = None,
+        property_context: Optional[str] = None # Added property_context
     ) -> Dict:
         """
-        Generate a response from the AI agent based on personality attributes and training.
+        Generate a response from the AI agent based on personality attributes, training, and property context.
         
         Args:
             user_message: The user's message
@@ -36,7 +37,7 @@ class AgentChat:
             Dict containing the agent's response and metadata
         """
         # Create system prompt based on personality attributes
-        system_prompt = self._create_system_prompt(personality_attributes, templates)
+        system_prompt = self._create_system_prompt(personality_attributes, templates, property_context) # Pass property_context
         
         # Format conversation history
         formatted_history = self._format_conversation_history(conversation_history)
@@ -80,11 +81,12 @@ class AgentChat:
         }
     
     def _create_system_prompt(
-        self, 
+        self,
         personality_attributes: Dict[str, float],
-        templates: Optional[List[Dict]] = None
+        templates: Optional[List[Dict]] = None,
+        property_context: Optional[str] = None # Added property_context
     ) -> str:
-        """Create a system prompt based on personality attributes and templates"""
+        """Create a system prompt based on personality attributes, templates, and property context"""
         
         # Format personality attributes
         personality_desc = "\n".join([
@@ -105,14 +107,16 @@ class AgentChat:
 Your personality attributes are:
 {personality_desc}
 
-Your goal is to assist potential clients with their real estate needs, providing helpful, 
+Your goal is to assist potential clients with their real estate needs, providing helpful,
 accurate information while maintaining your personality attributes.
 
 {template_examples}
 
-Always be professional, honest, and helpful. Avoid making up specific property details 
-unless they are mentioned in the conversation. If you don't know something, acknowledge 
-it and offer to find out more information.
+{("Consider the following property information if relevant to the user's query:\n" + property_context) if property_context else ""}
+
+Always be professional, honest, and helpful. Avoid making up specific property details
+unless they are mentioned in the conversation or provided in the property information context.
+If you don't know something, acknowledge it and offer to find out more information.
 """
         return system_prompt
     

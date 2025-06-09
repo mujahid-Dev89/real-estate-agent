@@ -94,9 +94,45 @@ async def evaluate_response(
 def get_scenarios(
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 10
+    limit: int = 100 # Increased limit to fetch more scenarios by default for the dropdown
 ):
-    scenarios = db.query(TrainingScenarioModel).offset(skip).limit(limit).all()
+    scenarios = db.query(TrainingScenarioModel).order_by(TrainingScenarioModel.created_at.desc()).offset(skip).limit(limit).all()
+    if not scenarios and skip == 0: # Only add defaults if the table is truly empty
+        default_scenarios_data = [
+            {
+                "title": "Basic Studio Inquiry (Ajman)",
+                "description": "A customer asks for basic information about studio apartments in Ajman.",
+                "customer_query": "Hi, I'm looking for a studio apartment in Ajman. Can you tell me what's available?",
+                "context": "The agent has access to current listings. Ajman is known for affordable studios. Key areas: Al Rashidiya, Al Nuaimiya.",
+                "difficulty_level": "Easy",
+                "category": "Property Inquiry"
+            },
+            {
+                "title": "Budget Constraint Inquiry",
+                "description": "A customer has a specific, potentially tight budget for a 2-bedroom apartment.",
+                "customer_query": "I need a 2-bedroom apartment, but my budget is strictly AED 30,000 per year. Is that possible in Sharjah?",
+                "context": "Sharjah has varied pricing. Some areas might meet this, others won't. Agent should manage expectations and offer solutions.",
+                "difficulty_level": "Medium",
+                "category": "Budget Discussion"
+            },
+            {
+                "title": "Handling Objection: Price Too High",
+                "description": "A customer objects to the price of a listed property.",
+                "customer_query": "That villa is beautiful, but the price seems a bit high compared to others I've seen.",
+                "context": "The villa has unique features: premium finishing, large plot, recent renovation. Market comparables might not reflect these.",
+                "difficulty_level": "Hard",
+                "category": "Objection Handling"
+            }
+        ]
+        new_scenarios = []
+        for scen_data in default_scenarios_data:
+            db_scenario = TrainingScenarioModel(**scen_data)
+            db.add(db_scenario)
+            new_scenarios.append(db_scenario)
+        db.commit()
+        for scen in new_scenarios:
+            db.refresh(scen) # Refresh to get DB-generated fields like ID and created_at
+        return new_scenarios
     return scenarios
 
 @router.post("/scenarios", response_model=TrainingScenario, status_code=201)

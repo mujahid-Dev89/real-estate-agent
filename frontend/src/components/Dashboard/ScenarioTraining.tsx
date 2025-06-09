@@ -5,9 +5,19 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input" // Added
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter, // Added
+  DialogTrigger,
+} from "@/components/ui/dialog" // Added Dialog components
 import { personalityTrainingApi } from "@/services/api"
 import { useToast } from "@/components/ui/use-toast"
-import { CheckCircle, AlertCircle, ArrowRight, Loader2 } from "lucide-react" // Added Loader2
+import { CheckCircle, AlertCircle, ArrowRight, Loader2, PlusCircle, Edit3, Trash2 } from "lucide-react" // Added icons
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { AIModel } from "@/services/api"
 
@@ -40,6 +50,17 @@ export function ScenarioTraining() {
   const [scenarios, setScenarios] = useState<TrainingScenario[]>([])
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | undefined>(undefined)
   const [isLoadingScenarios, setIsLoadingScenarios] = useState(true)
+  const [isScenarioDialogOpen, setIsScenarioDialogOpen] = useState(false)
+  const [editingScenario, setEditingScenario] = useState<TrainingScenario | null>(null)
+  const [scenarioFormData, setScenarioFormData] = useState({
+    title: "",
+    description: "",
+    customer_query: "",
+    context: "",
+    difficulty_level: "Easy",
+    category: "General Inquiry",
+  })
+  const [isSavingScenario, setIsSavingScenario] = useState(false)
 
   const [selectedModel, setSelectedModel] = useState<AIModel>("deepseek")
 
@@ -95,14 +116,155 @@ export function ScenarioTraining() {
   } finally {
     setIsEvaluating(false)
   }
+}
+
+  const handleOpenScenarioDialog = (scenario: TrainingScenario | null = null) => {
+    if (scenario) {
+      setEditingScenario(scenario)
+      setScenarioFormData({
+        title: scenario.title,
+        description: scenario.description,
+        customer_query: scenario.customer_query,
+        context: scenario.context,
+        difficulty_level: scenario.difficulty_level,
+        category: scenario.category,
+      })
+    } else {
+      setEditingScenario(null)
+      setScenarioFormData({
+        title: "",
+        description: "",
+        customer_query: "",
+        context: "",
+        difficulty_level: "Easy",
+        category: "General Inquiry",
+      })
+    }
+    setIsScenarioDialogOpen(true)
   }
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Scenario Training</CardTitle>
-          <CardDescription>Practice responding to real estate scenarios. Select a scenario and provide your response.</CardDescription>
+  const handleScenarioFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setScenarioFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleScenarioSelectChange = (name: string, value: string) => {
+    setScenarioFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleSaveScenario = async () => {
+    setIsSavingScenario(true)
+    try {
+      if (editingScenario) {
+        await personalityTrainingApi.updateScenario(editingScenario.id, scenarioFormData)
+        toast({ title: "Success", description: "Scenario updated successfully." })
+      } else {
+        await personalityTrainingApi.createScenario(scenarioFormData)
+        toast({ title: "Success", description: "Scenario created successfully." })
+      }
+      setIsScenarioDialogOpen(false)
+      loadScenarios() // Refresh the list
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save scenario.", variant: "destructive" })
+    } finally {
+      setIsSavingScenario(false)
+    }
+  }
+
+  const handleDeleteScenario = async (scenarioId: string | undefined) => {
+    if (!scenarioId) return
+    if (!confirm("Are you sure you want to delete this scenario? This action cannot be undone.")) {
+        return
+    }
+    try {
+        await personalityTrainingApi.deleteScenario(scenarioId)
+        toast({ title: "Success", description: "Scenario deleted successfully." })
+        loadScenarios() // Refresh the list
+        if (selectedScenarioId === scenarioId) {
+            setSelectedScenarioId(undefined) // Clear selection if deleted
+            setResponse("") // Clear response if current scenario is deleted
+            setEvaluation(null) // Clear evaluation
+        }
+    } catch (error) {
+        toast({ title: "Error", description: "Failed to delete scenario.", variant: "destructive" })
+    }
+  }
+  
+    // For debugging
+    console.log("Selected Scenario ID:", selectedScenarioId);
+    console.log("Current Scenario Object:", currentScenario);
+    console.log("Response Text:", response, "Trimmed length:", response.trim().length); // Check trimmed length
+    console.log("!response.trim():", !response.trim()); // Check the condition directly
+    console.log("Is Evaluating:", isEvaluating);
+  
+    return (
+      <div className="space-y-6">
+        <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Scenario Training</CardTitle>
+            <CardDescription>
+              Select or create a scenario, choose an AI model, then type your response.
+              Submit for evaluation.
+            </CardDescription>
+          </div>
+          <Dialog open={isScenarioDialogOpen} onOpenChange={setIsScenarioDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenScenarioDialog()} variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Scenario
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>{editingScenario ? "Edit Scenario" : "Create New Scenario"}</DialogTitle>
+                <DialogDescription>
+                  {editingScenario ? "Update the details of your training scenario." : "Fill in the details for a new training scenario."}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="title" className="text-right">Title</label>
+                  <Input id="title" name="title" value={scenarioFormData.title} onChange={handleScenarioFormChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="description" className="text-right">Description</label>
+                  <Textarea id="description" name="description" value={scenarioFormData.description} onChange={handleScenarioFormChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="customer_query" className="text-right">Customer Query</label>
+                  <Textarea id="customer_query" name="customer_query" value={scenarioFormData.customer_query} onChange={handleScenarioFormChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="context" className="text-right">Context</label>
+                  <Textarea id="context" name="context" value={scenarioFormData.context} onChange={handleScenarioFormChange} className="col-span-3" />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="difficulty_level" className="text-right">Difficulty</label>
+                  <Select name="difficulty_level" value={scenarioFormData.difficulty_level} onValueChange={(value) => handleScenarioSelectChange("difficulty_level", value)}>
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Easy">Easy</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label htmlFor="category" className="text-right">Category</label>
+                  <Input id="category" name="category" value={scenarioFormData.category} onChange={handleScenarioFormChange} className="col-span-3" placeholder="e.g., Property Inquiry, Negotiation" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsScenarioDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveScenario} disabled={isSavingScenario}>
+                  {isSavingScenario ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {editingScenario ? "Save Changes" : "Create Scenario"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardHeader>
         <CardContent>
           {isLoadingScenarios ? (
@@ -110,15 +272,34 @@ export function ScenarioTraining() {
               <Loader2 className="h-8 w-8 animate-spin" />
               <p className="ml-2">Loading scenarios...</p>
             </div>
-          ) : scenarios.length === 0 ? (
-             <p className="text-center text-muted-foreground">No training scenarios available. Please add some first.</p>
+          ) : scenarios.length === 0 && !isLoadingScenarios ? (
+             <p className="text-center text-muted-foreground py-4">No training scenarios available. Click "Add New Scenario" to create one.</p>
           ) : (
             <div className="space-y-4">
               <div className="space-y-2">
-                <h3 className="font-semibold">Select Scenario</h3>
-                <Select value={selectedScenarioId} onValueChange={(value) => setSelectedScenarioId(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a scenario" />
+                <div className="flex justify-between items-center">
+                  <h3 className="font-semibold">Select Scenario</h3>
+                  {currentScenario && (
+                    <div className="flex space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenScenarioDialog(currentScenario)}>
+                            <Edit3 className="mr-1 h-3 w-3" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteScenario(currentScenario?.id)}>
+                            <Trash2 className="mr-1 h-3 w-3" /> Delete
+                        </Button>
+                    </div>
+                  )}
+                </div>
+                <Select
+                    value={selectedScenarioId}
+                    onValueChange={(value) => {
+                        setSelectedScenarioId(value);
+                        setResponse(""); // Clear response when scenario changes
+                        setEvaluation(null); // Clear evaluation
+                    }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a scenario to practice or manage" />
                   </SelectTrigger>
                   <SelectContent>
                     {scenarios.map(scenario => (
@@ -166,8 +347,9 @@ export function ScenarioTraining() {
               <Textarea
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
-                placeholder="Type your response here..."
+                placeholder={currentScenario ? `How would you respond to: "${currentScenario.customer_query}"? Consider the context and desired personality traits.` : "Select a scenario to begin..."}
                 className="min-h-[100px]"
+                disabled={!currentScenario}
               />
             </div>
 

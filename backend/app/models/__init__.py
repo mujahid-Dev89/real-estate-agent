@@ -2,6 +2,7 @@ from .template import ResponseTemplate
 from .user import User
 from .training import TrainingScenario, TrainingResponse
 from .personality import PersonalityAttribute
+from .property import Property # Add this line
 from ..database import Base, engine
 
 def create_tables():

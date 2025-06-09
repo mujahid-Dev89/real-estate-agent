@@ -7,7 +7,8 @@ import { RootState, AppDispatch } from '../../store';
 const Login = () => {
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
-    const { isLoading, error, token } = useSelector((state: RootState) => state.auth);
+    // Destructure isAuthenticated as well
+    const { isLoading, error, token, isAuthenticated } = useSelector((state: RootState) => state.auth);
     
     const [credentials, setCredentials] = useState({
         username: '',
@@ -15,10 +16,11 @@ const Login = () => {
     });
     
     useEffect(() => {
-        if (token) {
-            navigate('/dashboard');
+        // Navigate to dashboard only if authenticated
+        if (isAuthenticated) {
+            navigate('/dashboard'); // Or perhaps '/' which is protected by PrivateRoute
         }
-    }, [token, navigate]);
+    }, [isAuthenticated, navigate]); // Depend on isAuthenticated
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

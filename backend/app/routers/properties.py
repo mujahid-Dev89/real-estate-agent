@@ -9,7 +9,14 @@ from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
 
 router = APIRouter(
     prefix="/api/properties",
-    tags=["properties"]
+    tags=["properties"],
+    # Note: Trailing slashes are generally handled by FastAPI itself.
+    # If strict trailing slash behavior is needed, it's often configured at the FastAPI app level
+    # or by ensuring client requests are consistent.
+    # However, for individual routers, this isn't a standard APIRouter parameter.
+    # The redirect behavior is more likely the cause if CORS is an issue.
+    # Let's ensure the client calls /api/properties/ for POST if the server expects it.
+    # For now, no change here, will re-evaluate if client-side slash addition (denied previously) is needed.
 )
 
 @router.post("/", response_model=PropertyResponse, status_code=201)

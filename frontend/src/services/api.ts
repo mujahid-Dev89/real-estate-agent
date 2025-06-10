@@ -63,9 +63,9 @@ export const personalityTrainingApi = {
   submitScenarioResponse: (id: string, data: any) => api.post(`/scenarios/${id}/response`, data),
 
   // Properties
-  getProperties: (params?: any) => api.get("/properties", { params }),
-  getPropertyById: (id: string) => api.get(`/properties/${id}`),
-  createProperty: (data: any) => api.post("/properties", data),
+  getProperties: (params?: any) => api.get("/properties/", { params }), // Added trailing slash
+  getPropertyById: (id: string) => api.get(`/properties/${id}`), // ID-specific usually don't need trailing slash for REST
+  createProperty: (data: any) => api.post("/properties/", data), // Added trailing slash
   updateProperty: (id: string, data: any) => api.put(`/properties/${id}`, data),
   deleteProperty: (id: string) => api.delete(`/properties/${id}`),
 

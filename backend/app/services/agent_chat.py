@@ -102,7 +102,12 @@ class AgentChat:
                 template_examples += f"Response: {template['content']}\n"
         
         # Create the system prompt
-        system_prompt = f"""You are an AI-powered real estate agent assistant. 
+        property_info_section = ""
+        if property_context:
+            property_info_section = "Consider the following property information if relevant to the user's query:\n"
+            property_info_section += property_context + "\n" # Ensure a newline after context too
+
+        system_prompt = f"""You are an AI-powered real estate agent assistant.
         
 Your personality attributes are:
 {personality_desc}
@@ -112,8 +117,7 @@ accurate information while maintaining your personality attributes.
 
 {template_examples}
 
-{("Consider the following property information if relevant to the user's query:\n" + property_context) if property_context else ""}
-
+{property_info_section}
 Always be professional, honest, and helpful. Avoid making up specific property details
 unless they are mentioned in the conversation or provided in the property information context.
 If you don't know something, acknowledge it and offer to find out more information.

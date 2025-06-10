@@ -266,8 +266,14 @@ export function ManageProperties() {
                         }
                     }}
                     className="col-span-3 font-mono text-sm"
-                    placeholder='{ "pool": true, "gym": false }' 
+                    placeholder='{ "pool": true, "gym": false }'
                   />
+                  <div className="col-start-2 col-span-3">
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter amenities as a valid JSON object. E.g.,
+                      <code>{'{ "pool": true, "parking_spots": 2, "balcony": "large" }'}</code>
+                    </p>
+                  </div>
                 </div>
                 {/* Availability */}
                 <div className="grid grid-cols-4 items-center gap-4">

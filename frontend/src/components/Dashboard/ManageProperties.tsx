@@ -128,13 +128,22 @@ export function ManageProperties() {
     setIsSaving(true)
     try {
       const dataToSave = { ...formData }
-      // Ensure numeric fields are numbers
       dataToSave.price = Number(dataToSave.price)
       dataToSave.area_sqft = dataToSave.area_sqft ? Number(dataToSave.area_sqft) : undefined
       dataToSave.bedrooms = dataToSave.bedrooms ? Number(dataToSave.bedrooms) : undefined
       dataToSave.bathrooms = dataToSave.bathrooms ? Number(dataToSave.bathrooms) : undefined
       dataToSave.is_available = Number(dataToSave.is_available)
 
+      // Ensure amenities is a valid object
+      if (typeof dataToSave.amenities === "string") {
+        try {
+          dataToSave.amenities = JSON.parse(dataToSave.amenities)
+        } catch {
+          toast({ title: "Validation Error", description: "Amenities must be valid JSON.", variant: "destructive" })
+          setIsSaving(false)
+          return
+        }
+      }
 
       if (editingProperty) {
         await personalityTrainingApi.updateProperty(editingProperty.id, dataToSave)
@@ -146,14 +155,8 @@ export function ManageProperties() {
       setIsDialogOpen(false)
       loadProperties()
     } catch (error: any) {
-       const errorMsg = error.response?.data?.detail || "Failed to save property."
-       if (Array.isArray(errorMsg)) {
-        errorMsg.forEach(err => {
-          toast({ title: "Validation Error", description: `${err.loc.join(" -> ")}: ${err.msg}`, variant: "destructive" })
-        })
-       } else {
-        toast({ title: "Error", description: errorMsg, variant: "destructive" })
-       }
+      const errorMsg = error.response?.data?.detail || "Failed to save property."
+      toast({ title: "Error", description: errorMsg, variant: "destructive" })
     } finally {
       setIsSaving(false)
     }

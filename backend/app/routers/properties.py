@@ -21,7 +21,11 @@ router = APIRouter(
 
 @router.post("/", response_model=PropertyResponse, status_code=201)
 def create_property(property_data: PropertyCreate, db: Session = Depends(get_db)):
-    db_property = PropertyModel(**property_data.model_dump())
+    data = property_data.model_dump()
+    # Convert property_type enum to string if needed
+    if hasattr(data["property_type"], "value"):
+        data["property_type"] = data["property_type"].value
+    db_property = PropertyModel(**data)
     db.add(db_property)
     db.commit()
     db.refresh(db_property)
@@ -67,6 +71,9 @@ def update_property(property_id: UUID, property_data: PropertyUpdate, db: Sessio
         raise HTTPException(status_code=404, detail="Property not found")
     
     update_data = property_data.model_dump(exclude_unset=True)
+    # Convert property_type enum to string if needed
+    if "property_type" in update_data and hasattr(update_data["property_type"], "value"):
+        update_data["property_type"] = update_data["property_type"].value
     for key, value in update_data.items():
         setattr(db_property, key, value)
         

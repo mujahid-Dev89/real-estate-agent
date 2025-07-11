@@ -7,6 +7,8 @@ import Dashboard from "./components/Dashboard/Dashboard"
 import { PrivateRoute } from "./routes/PrivateRoute"
 import { Toaster } from "./components/ui/toaster"
 import AgentTestingPage from "./pages/AgentTestingPage"
+import AgentTalkPage from "./pages/AgentTalkPage"
+import AgentVoiceChatPage from "@/pages/AgentVoiceChatPage"
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route element={<PrivateRoute />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/agent-testing" element={<AgentTestingPage />} />
+            <Route path="/agent-talk" element={<AgentTalkPage  />} />
+             <Route path="/agent-voice-chat" element={<AgentVoiceChatPage />} />
             {/* Add other protected routes here */}
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

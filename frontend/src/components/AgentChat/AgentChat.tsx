@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
-import { Send, User, Bot, Loader2, AlertTriangle } from "lucide-react"
+import { Send, User, Bot, Loader2, AlertTriangle, Mic, MicOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -29,6 +28,56 @@ export function AgentChat() {
   const [apiError, setApiError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // --- Voice chat state ---
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
+
+  // --- Text-to-speech ---
+  const speak = (text: string) => {
+    if ("speechSynthesis" in window) {
+      const utterance = new window.SpeechSynthesisUtterance(text)
+      utterance.lang = "en-US"
+      window.speechSynthesis.speak(utterance)
+    }
+  }
+
+  // Speak agent's message
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg.role === "assistant" && lastMsg.content) {
+        speak(lastMsg.content)
+      }
+    }
+  }, [messages])
+
+  // --- Speech-to-text ---
+  const handleStartListening = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      toast({ title: "Error", description: "Speech recognition not supported in this browser.", variant: "destructive" })
+      return
+    }
+    const SpeechRecognition = (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.lang = "en-US"
+    recognition.interimResults = false
+    recognition.maxAlternatives = 1
+    recognition.onresult = (event: any) => {
+      setInput(event.results[0][0].transcript)
+      setIsListening(false)
+    }
+    recognition.onerror = () => setIsListening(false)
+    recognition.onend = () => setIsListening(false)
+    recognition.start()
+    setIsListening(true)
+    recognitionRef.current = recognition
+  }
+
+  const handleStopListening = () => {
+    recognitionRef.current?.stop()
+    setIsListening(false)
+  }
+
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -37,10 +86,8 @@ export function AgentChat() {
   const handleSendMessage = async () => {
     if (!input.trim()) return
 
-    // Clear any previous errors
     setApiError(null)
 
-    // Add user message
     const userMessage: Message = {
       role: "user",
       content: input,
@@ -52,14 +99,12 @@ export function AgentChat() {
     setIsLoading(true)
 
     try {
-      // Call API
       const response = await personalityTrainingApi.chatWithAgent({
         message: input,
         history: messages,
         model: selectedModel,
       })
 
-      // Add assistant message
       const assistantMessage: Message = {
         role: "assistant",
         content: response.data.response,
@@ -69,18 +114,15 @@ export function AgentChat() {
 
       setMessages((prev) => [...prev, assistantMessage])
 
-      // Show model info toast
       toast({
         title: "Agent Response",
         description: `Using ${response.data.model} model (${response.data.tokens_used} tokens)`,
       })
 
-      // If there was an error but we still got a response, show it
       if (response.data.error) {
         setApiError(response.data.error)
       }
     } catch (error: any) {
-      // Add error message as assistant
       const errorMessage: Message = {
         role: "assistant",
         content: "I'm sorry, I'm having trouble connecting to my AI services right now. Please try again later.",
@@ -89,8 +131,6 @@ export function AgentChat() {
       }
 
       setMessages((prev) => [...prev, errorMessage])
-
-      // Set the error message
       setApiError(error.response?.data?.detail || error.message || "Failed to get agent response")
 
       toast({
@@ -191,10 +231,19 @@ export function AgentChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
+            placeholder="Type your message or use the mic..."
             className="resize-none"
             disabled={isLoading}
           />
+          <Button
+            type="button"
+            onClick={isListening ? handleStopListening : handleStartListening}
+            disabled={isLoading}
+            variant={isListening ? "destructive" : "default"}
+            title={isListening ? "Stop Listening" : "Speak"}
+          >
+            {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          </Button>
           <Button onClick={handleSendMessage} disabled={isLoading || !input.trim()} className="shrink-0">
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
@@ -203,4 +252,3 @@ export function AgentChat() {
     </Card>
   )
 }
-

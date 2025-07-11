@@ -6,6 +6,8 @@ from uuid import UUID
 from ..database import get_db
 from ..models.property import Property as PropertyModel
 from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
+from ..models.property import PropertyType
+
 
 router = APIRouter(
     prefix="/api/properties",
@@ -44,7 +46,12 @@ def get_properties(
 ):
     query = db.query(PropertyModel)
     if property_type:
-        query = query.filter(PropertyModel.property_type == property_type)
+        try:
+            property_type_enum = PropertyType(property_type.lower())
+            query = query.filter(PropertyModel.property_type == property_type_enum)
+        except ValueError:
+        # Invalid enum value, return empty or raise HTTPException
+            return []
     if location:
         query = query.filter(PropertyModel.location.ilike(f"%{location}%")) # case-insensitive search
     if min_price is not None:

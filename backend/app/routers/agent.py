@@ -11,6 +11,8 @@ from app.models.personality import PersonalityAttribute
 from app.models.property import Property as PropertyModel # Added
 from app.config import settings
 import logging
+from app.models.property import PropertyType  # Make sure this import is at the top
+
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -99,9 +101,9 @@ async def chat_with_agent(
                 break
         
         if "rent" in lower_message:
-            property_query = property_query.filter(PropertyModel.property_type == "rent")
+            property_query = property_query.filter(PropertyModel.property_type == PropertyType.RENT)
         elif "sale" in lower_message or "buy" in lower_message:
-            property_query = property_query.filter(PropertyModel.property_type == "sale")
+            property_query = property_query.filter(PropertyModel.property_type == PropertyType.SALE)
 
         relevant_properties = property_query.limit(3).all() # Get top 3 matches
 

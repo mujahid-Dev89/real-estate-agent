@@ -3,6 +3,7 @@ import requests
 import json
 from app.config import settings
 from app.services.ai_evaluation import AIModel
+from openai import AsyncOpenAI
 import logging
 
 # Set up logging
@@ -10,8 +11,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class AgentChat:
-    def __init__(self, model_type: AIModel = AIModel.DEEPSEEK):
-        self.model_type = model_type
+    def __init__(self, model_type: AIModel = AIModel.OPENAI):
+        self.model_type = AIModel.OPENAI
         self.openai_api_key = settings.OPENAI_API_KEY
         self.deepseek_api_key = settings.DEEPSEEK_API_KEY
         self.mistral_api_key = settings.MISTRAL_API_KEY
@@ -241,7 +242,9 @@ If you don't know something, acknowledge it and offer to find out more informati
         full_messages = [{"role": "system", "content": system_prompt}] + messages
         
         try:
-            response = await openai.ChatCompletion.acreate(
+            client = AsyncOpenAI(api_key=self.openai_api_key)
+            # Use OpenAI's ChatCompletion endpoint
+            response = await client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=full_messages,
                 temperature=0.7,

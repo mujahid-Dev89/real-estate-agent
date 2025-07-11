@@ -3,6 +3,7 @@ import openai
 import requests
 from app.config import settings
 from enum import Enum
+from openai import AsyncOpenAI
 
 class AIModel(Enum):
     DEEPSEEK = "deepseek"
@@ -10,7 +11,7 @@ class AIModel(Enum):
     MISTRAL = "mistral"
 
 class AIEvaluator:
-    def __init__(self, model_type: AIModel = AIModel.DEEPSEEK):
+    def __init__(self, model_type: AIModel = AIModel.OPENAI):
         self.model_type = model_type
         self.openai_api_key = settings.OPENAI_API_KEY
         self.deepseek_api_key = settings.DEEPSEEK_API_KEY
@@ -106,8 +107,8 @@ class AIEvaluator:
             raise Exception(f"Mistral API error: {response.text}")
 
     async def _evaluate_with_openai(self, prompt: str) -> Dict:
-        openai.api_key = self.openai_api_key
-        response = await openai.ChatCompletion.acreate(
+        client = AsyncOpenAI(api_key = self.openai_api_key)
+        response = await client.chat.completions.create(
             model="gpt-3.5-turbo",  # Using GPT-3.5 instead of GPT-4 to reduce costs
             messages=[
                 {

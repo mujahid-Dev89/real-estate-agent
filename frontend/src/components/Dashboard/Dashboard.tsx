@@ -6,7 +6,8 @@ import { PersonalityAttributes } from "./PersonalityAttributes"
 import { ScenarioTraining } from "./ScenarioTraining"
 import { ResponseTemplates } from "./ResponseTemplates"
 import { ManageProperties } from "./ManageProperties" // Added
-import { MessageSquare } from "lucide-react"
+import { MessageSquare,Mic } from "lucide-react"
+
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -19,6 +20,14 @@ export default function Dashboard() {
           <MessageSquare className="h-4 w-4" />
           Test Agent
         </Button>
+         <Button onClick={() => navigate("/agent-talk")} className="flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            Agent Talk
+          </Button>
+           <Button onClick={() => navigate("/agent-voice-chat")} className="flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            Agent VOIP
+          </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

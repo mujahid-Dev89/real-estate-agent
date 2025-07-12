@@ -10,7 +10,7 @@ python-multipart==0.0.6
 motor==3.3.2
 qdrant-client==1.7.1
 transformers==4.36.2
-torch==2.1.2
+torch==2.7.1
 pytest==7.4.4
 pytest-asyncio==0.23.4
 email-validator

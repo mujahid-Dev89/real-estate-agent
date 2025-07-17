@@ -5,13 +5,13 @@ from enum import Enum as PyEnum
 
 # Re-define PropertyType Enum for Pydantic, matching the model's Enum
 class PropertyTypeEnum(str, PyEnum):
-    SALE = "sale"
-    RENT = "rent"
+    rent = "rent"
+    sale = "sale"
 
 class PropertyBase(BaseModel):
     title: str = Field(..., min_length=3, max_length=100)
     description: Optional[str] = None
-    property_type: PropertyTypeEnum = PropertyTypeEnum.RENT
+    property_type: PropertyTypeEnum = PropertyTypeEnum.rent
     price: float = Field(..., gt=0)
     currency: str = Field(default="AED", max_length=5)
     area_sqft: Optional[int] = Field(None, gt=0)

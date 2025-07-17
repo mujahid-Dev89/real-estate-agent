@@ -24,18 +24,18 @@ router = APIRouter(
 @router.post("/", response_model=PropertyResponse, status_code=201)
 def create_property(property_data: PropertyCreate, db: Session = Depends(get_db)):
     try:
-        data = property_data.model_dump()
-        if hasattr(data["property_type"], "value"):
-            data["property_type"] = data["property_type"].value
-        db_property = PropertyModel(**data)
+        # Don't use .model_dump() to create the SQLAlchemy model
+        db_property = PropertyModel(**property_data.dict())
         db.add(db_property)
         db.commit()
         db.refresh(db_property)
         return db_property
     except Exception as e:
+        import traceback
         print("CREATE PROPERTY ERROR:", e)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/", response_model=List[PropertyResponse])
 def get_properties(

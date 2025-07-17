@@ -7,7 +7,7 @@ from ..database import get_db
 from ..models.property import Property as PropertyModel
 from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
 from ..models.property import PropertyType
-import traceback
+
 
 router = APIRouter(
     prefix="/api/properties",
@@ -23,18 +23,26 @@ router = APIRouter(
 
 @router.post("/", response_model=PropertyResponse, status_code=201)
 def create_property(property_data: PropertyCreate, db: Session = Depends(get_db)):
+    data = property_data.model_dump()
+
+    # Validate or correct `property_type`
+    from ..schemas.property import PropertyTypeEnum  # ensure import
+
+    raw_value = data.get("property_type", PropertyTypeEnum.rent)
+
+    # Try to coerce to enum, fallback to default
     try:
-        # Don't use .model_dump() to create the SQLAlchemy model
-        db_property = PropertyModel(**property_data.dict())
-        db.add(db_property)
-        db.commit()
-        db.refresh(db_property)
-        return db_property
-    except Exception as e:
-        import traceback
-        print("CREATE PROPERTY ERROR:", e)
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        property_type_enum = PropertyTypeEnum(raw_value)
+    except ValueError:
+        property_type_enum = PropertyTypeEnum.rent
+
+    data["property_type"] = property_type_enum.value
+
+    db_property = PropertyModel(**data)
+    db.add(db_property)
+    db.commit()
+    db.refresh(db_property)
+    return db_property
 
 
 @router.get("/", response_model=List[PropertyResponse])

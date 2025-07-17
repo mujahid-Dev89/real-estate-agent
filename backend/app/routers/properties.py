@@ -7,7 +7,7 @@ from ..database import get_db
 from ..models.property import Property as PropertyModel
 from ..schemas.property import PropertyCreate, PropertyUpdate, PropertyResponse
 from ..models.property import PropertyType
-
+import traceback
 
 router = APIRouter(
     prefix="/api/properties",
@@ -23,15 +23,19 @@ router = APIRouter(
 
 @router.post("/", response_model=PropertyResponse, status_code=201)
 def create_property(property_data: PropertyCreate, db: Session = Depends(get_db)):
-    data = property_data.model_dump()
-    # Convert property_type enum to string if needed
-    if hasattr(data["property_type"], "value"):
-        data["property_type"] = data["property_type"].value
-    db_property = PropertyModel(**data)
-    db.add(db_property)
-    db.commit()
-    db.refresh(db_property)
-    return db_property
+    try:
+        data = property_data.model_dump()
+        if hasattr(data["property_type"], "value"):
+            data["property_type"] = data["property_type"].value
+        db_property = PropertyModel(**data)
+        db.add(db_property)
+        db.commit()
+        db.refresh(db_property)
+        return db_property
+    except Exception as e:
+        print("CREATE PROPERTY ERROR:", e)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/", response_model=List[PropertyResponse])
 def get_properties(

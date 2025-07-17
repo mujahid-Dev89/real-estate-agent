@@ -1,40 +1,31 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
-from uuid import UUID
+from sqlalchemy import Column, String, Integer, Float, Text, Enum as SQLAlchemyEnum
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+import uuid
 from enum import Enum as PyEnum
+from ..database import Base
 
-# Re-define PropertyType Enum for Pydantic, matching the model's Enum
-class PropertyTypeEnum(str, PyEnum):
-    rent = "rent"
-    sale = "sale"
+class PropertyType(PyEnum):
+    SALE = "sale"
+    RENT = "rent"
 
-class PropertyBase(BaseModel):
-    title: str = Field(..., min_length=3, max_length=100)
-    description: Optional[str] = None
-    property_type: PropertyTypeEnum = PropertyTypeEnum.rent
-    price: float = Field(..., gt=0)
-    currency: str = Field(default="AED", max_length=5)
-    area_sqft: Optional[int] = Field(None, gt=0)
-    bedrooms: Optional[int] = Field(None, ge=0)
-    bathrooms: Optional[int] = Field(None, ge=0)
-    location: Optional[str] = None
-    amenities: Optional[Dict[str, Any]] = None # Flexible dictionary for amenities
-    image_url: Optional[str] = None
-    is_available: Optional[int] = 1
+class Property(Base):
+    __tablename__ = "properties"
 
-class PropertyCreate(PropertyBase):
-    pass
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    property_type = Column(SQLAlchemyEnum(PropertyType), nullable=False, default=PropertyType.RENT)
+    price = Column(Float, nullable=False)
+    currency = Column(String, nullable=False, default="AED")
+    area_sqft = Column(Integer, nullable=True)
+    bedrooms = Column(Integer, nullable=True)
+    bathrooms = Column(Integer, nullable=True)
+    location = Column(String, nullable=True, index=True)
+    amenities = Column(JSONB, nullable=True) # e.g., {"pool": true, "gym": false, "parking_spots": 1}
+    image_url = Column(String, nullable=True)
+    is_available = Column(Integer, default=1, nullable=False) # Using Integer for potential future states (1=available, 0=unavailable, 2=pending etc)
 
-class PropertyUpdate(PropertyBase):
-    title: Optional[str] = Field(None, min_length=3, max_length=100)
-    price: Optional[float] = Field(None, gt=0)
-    # Allow all fields to be optional on update
-    property_type: Optional[PropertyTypeEnum] = None
-    currency: Optional[str] = Field(None, max_length=5)
-
-
-class PropertyResponse(PropertyBase):
-    id: UUID
-
-    class Config:
-        from_attributes = True # Replaces orm_mode = True in Pydantic v2
+    # Add other relevant fields like:
+    # created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # user_id = Column(Integer, ForeignKey("users.id")) # If properties are linked to users

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { API_BASE_URL} from '@/config';
 
 interface AuthState {
   user: any | null;
@@ -31,7 +32,7 @@ export const login = createAsyncThunk(
       formData.append('username', credentials.username);
       formData.append('password', credentials.password);
 
-      const response = await axios.post('https://real-estate-agent-ewzv.onrender.com/auth/token', formData);
+      const response = await axios.post(API_BASE_URL+'/auth/token', formData);
       const { access_token } = response.data;
       
       localStorage.setItem('token', access_token);
@@ -47,7 +48,7 @@ export const register = createAsyncThunk(
   'auth/register',
   async (userData: RegisterData, { rejectWithValue }) => {
     try {
-      const response = await axios.post('https://real-estate-agent-ewzv.onrender.com/auth/register', userData);
+      const response = await axios.post(API_BASE_URL + '/auth/register', userData);
       return response.data;
     } catch (error: any) {
       // Handle different types of error responses

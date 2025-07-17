@@ -5,8 +5,8 @@ from enum import Enum as PyEnum
 from ..database import Base
 
 class PropertyType(PyEnum):
-    SALE = "sale"
-    RENT = "rent"
+    sale = "sale"
+    rent = "rent"
 
 class Property(Base):
     __tablename__ = "properties"
@@ -14,7 +14,7 @@ class Property(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String, nullable=False, index=True)
     description = Column(Text, nullable=True)
-    property_type = Column(SQLAlchemyEnum(PropertyType), nullable=False, default=PropertyType.RENT)
+    property_type = Column(SQLAlchemyEnum(PropertyType), nullable=False, default=PropertyType.rent)
     price = Column(Float, nullable=False)
     currency = Column(String, nullable=False, default="AED")
     area_sqft = Column(Integer, nullable=True)

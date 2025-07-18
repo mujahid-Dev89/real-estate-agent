@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 import { personalityTrainingApi } from "@/services/api"
-import { API_BASE_URL } from "@/config"
+import { API_BASE_URL_WITH_API } from "@/config"
 
 interface Message {
   role: "user" | "assistant"
@@ -54,7 +54,7 @@ export function AgentTalk() {
       formData.append("file", audioBlob, "audio.webm")
       setIsRecording(false)
       try {
-        const res = await fetch(`${API_BASE_URL}/whisper/transcribe`, {
+        const res = await fetch(`${API_BASE_URL_WITH_API}/whisper/transcribe`, {
           method: "POST",
           body: formData,
         })
@@ -82,7 +82,7 @@ export function AgentTalk() {
   // --- Natural TTS using OpenAI ---
   const playTTS = async (text: string, onEnd?: () => void) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/tts/speak`, {
+      const res = await fetch(`${API_BASE_URL_WITH_API}/tts/speak`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
